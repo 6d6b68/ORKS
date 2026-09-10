@@ -203,3 +203,8 @@ RFC 7009 (OAuth token revocation), RFC 8615 (well-known URIs), RFC 9116 (securit
 ### 11.4 Registry vs. convention for `reason` codes and constraint names
  
 **Proposed: a lightweight public registry with an escape hatch.** Pure convention guarantees collisions ("does `ip_allowlist` mean CIDRs or exact IPs?"); a full IANA registry is too heavy for a v0.x spec and would stall momentum. Middle path: a registry file in the spec's public repository, amended by pull request under expert review — the same lightweight model that has kept the well-known URI and security.txt ecosystems coherent. Unregistered experimental values MUST use an `x-` prefix (`x-vendor_geo_fence`) so parsers can distinguish standard from private semantics. If ORKS later goes through the IETF, the repo registry migrates to IANA wholesale. Resolution: repo-based registry seeded with the §5.1 reason codes and §8 constraint names.
+
+### 11.5 Granular identifiers for large organzations
+ 
+**Proposed: subcomponents for identifiers** Ability to drill down into business units within the same organization to help with identification (input from speakeasy.com)
+
