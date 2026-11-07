@@ -180,7 +180,7 @@ This turns key hygiene into an auditable procurement question: "does this vendor
 ## 9. Security Considerations
  
 - **Revocation DoS / griefing**: mitigated by quarantine delay (§6), rate limiting, and full-key requirement. Vault/OpenBao chose to authenticate their proof-of-possession revocation endpoint for exactly this reason; ORKS instead keeps the endpoint open (so strangers can act on leaks) and absorbs the risk with delay + restriction.
-- **Enumeration**: uniform `200 accepted` responses, full-key requirement, checksum-first validation.
+- **Enumeration**: uniform `200 accepted` responses, full-key requirement, checksum-first validation. For issuers that accept opaque (non-ORKS) tokens at the revocation endpoint (§11.13), there is no checksum to pre-filter on, so rate limiting and uniform responses carry the anti-enumeration load alone; such issuers SHOULD enforce a minimum token length matching their own format and MAY apply stricter per-IP limits to opaque submissions than to checksum-valid ORKS keys.
 - **Attacker-visible prefixes**: self-identifying keys are also easier for attackers to grep. This trade is accepted: attackers already fingerprint keys by entropy and context; identifiability primarily accelerates defenders and automated scanners. As of late 2026 this objection is weaker still: GitHub's push protection now catches secrets with *no* known pattern via a context-aware classifier, so a prefix buys attackers little detection value they didn't already have. The prefix's value is attribution and routing — getting a found key to the right revocation endpoint — not detection.
 - **"Quarantined but still live" is a failure mode, not a safe state**: Truffle Security's 2026 re-verification found 929 leaked AWS keys still working that AWS had already placed under its compromised-key quarantine policy, some more than three years earlier. ORKS quarantine therefore has a mandatory hard-revoke at timer expiry (§6.2, MUST NOT exceed 72h); an issuer MUST NOT implement quarantine as an indefinite restricted state.
 - **Delay window is attacker window**: if the leak is real, quarantine leaves a restricted-but-live key for up to the delay period. §6.2's restriction requirement exists to shrink this; issuers with low tolerance should advertise and use `immediate`.
@@ -195,6 +195,8 @@ Added for v0.2 (see `NOTES.md` for details and links):
 - **Truffle Security Secrets Revocation Program (Nov 2026)** — issuer-side revocation endpoint or webhook with a 14-day revoke-or-explain SLA; 16 issuers at launch. Proprietary and scanner-centric, but the closest deployed analogue to §5 (§11.7).
 - **OpenID CAEP Interoperability Profile 1.0 draft 01 (Jul 2026)** — standardizes the `credential-change` event ORKS maps quarantine/revoke transitions onto (§11.2, §11.8).
 - **Demir et al., "Keys on Doormats: Exposed API Credentials on the Web" (CCS 2026)** — 11.9M-hostname measurement; distinctive key formats verify at much higher rates; notification yields removal far more often than revocation (§11.9).
+- **RFC 8959 (`secret-token` URI scheme)** — a format-agnostic marker that a string *is* a secret. Complementary to ORKS, which says *whose* secret and how to revoke it (§11.12).
+- **RFC 5234 / RFC 7405 (ABNF, case-sensitive strings)**, **RFC 4648 (base encodings)**, **KSUID** — referenced by the §11.14 format tightening.
  
 ## 11. Open Questions and Proposed Resolutions
  
@@ -277,3 +279,56 @@ Measurements published since v0.1 that make the §2 case concretely:
 - Demir et al., CCS 2026: exposed credentials stayed public ~12 months on average; after notification, removals fell ~50% by day 14 but revocations only ~26% — removal without revocation is the common outcome.
 - The same study: services with distinctive key formats verify at far higher rates (Telegram 85%), while GitHub's broad pattern produced most false positives — direct support for §3's self-identifying format plus a validated checksum (§11.6).
 - GitHub (Oct 2026): push protection now blocks Anthropic API keys by default and runs a context-aware classifier that catches unpatterned secrets — detection is no longer the bottleneck; attribution and revocation are.
+
+### 11.12 Relationship to RFC 8959 (`secret-token:` URI scheme) — issue #1
+
+**Proposed: ORKS keys MAY be carried as `secret-token:` URIs; the bare key is the canonical form.** RFC 8959 marks that a string *is* a secret without knowing its format; ORKS says *whose* it is and how to neutralize it. The two compose, since every character an ORKS key can contain (including the `.` and `-` of a raw-domain issuer, §11.1) is a `pchar`. Resolution:
+
+- The bare key (`orks[-tag]_{issuer}_{secret}_{check}`) is canonical. The checksum covers the bare key only (§11.6) and never the scheme prefix.
+- Holders MAY serialize a key as `secret-token:orks_...` in config files, logs and transport where a generic secret marker is useful. Issuers SHOULD accept either form at `/revoke`, `/report` and `/introspect`, and MUST strip a leading `secret-token:` (case-insensitive scheme per RFC 3986 §3.1) before checksum validation and lookup. "The complete key string" in §5.1 means the bare key after stripping.
+- Scanners SHOULD apply the same strip-then-validate rule, and SHOULD treat the URI form as a match of equal confidence — the checksum still discriminates true positives.
+- Issuers MUST NOT emit the URI form as the key's primary representation in dashboards or API responses; it is a carriage convention, not a key format.
+
+### 11.13 Opaque (non-ORKS) tokens at the revocation endpoint — issue #2
+
+**Proposed: allow discovery and revocation when the issuer is known out of band, so existing issuers can adopt the endpoints before (or without) adopting the key format.** Most tokens in circulation carry no machine-readable issuer, yet the reporter often knows the issuer from a hostname, SDK import or config key beside the leak. Wrapping legacy tokens inside the `secret` segment is impractical (length inflation, hides the token from existing scanners, breaks the CSPRNG semantics, and the issuer still has to accept the wrapped form). Resolution:
+
+1. The reporter identifies the issuer domain by any means and fetches `https://{issuer}/.well-known/api-key-config` as in §4.
+2. The discovery document advertises what the endpoints accept:
+   ```json
+   "accepted_key_formats": ["orks", "opaque"]
+   ```
+   `orks` is implied when the field is absent. An issuer MAY list `opaque` only — i.e. publish discovery and revocation for its current key format with no `orks_` keys in circulation.
+3. The reporter POSTs the token *as issued* to `revocation_endpoint` (or `report_endpoint`, §11.7). All of §5 applies unchanged: full token required, no authentication, uniform `200 accepted`, quarantine semantics per §6.
+4. Checksum-first validation (§5.2) applies to ORKS-format submissions only. For opaque submissions the issuer MUST still reject partial tokens, SHOULD enforce its own format's length and alphabet before any lookup, and SHOULD rate-limit opaque submissions at least as aggressively as ORKS ones (§9).
+5. Issuers accepting `opaque` SHOULD also publish the key *patterns* they issue, so scanners can route without the ORKS prefix:
+   ```json
+   "key_patterns": ["^sk_(live|test)_[0-9A-Za-z]{24,}$"]
+   ```
+   This is the open equivalent of a GitHub secret-scanning partner registration: pattern + endpoint, discoverable from the domain, no gatekeeper.
+
+This is the lowest-cost on-ramp in the spec — an issuer with an existing key format adopts ORKS by publishing one JSON file and one endpoint, and gains quarantine, reporting and CAEP events (§11.8) for keys it already issues. Migration to the self-identifying format (§3) becomes a second, independent step.
+
+### 11.14 Key format: lengths, alphabets, encoding — issue #3
+
+**Proposed: tighten §3 so two independent implementations cannot disagree on whether a string is a valid ORKS key.** Builds on §11.1 (raw domain) and §11.6 (checksum). Resolution:
+
+- **Secret length is bounded.** Keep `22*86(base62)` in the ABNF and state it in prose: the secret encodes between 128 and 512 bits of CSPRNG output. 27 characters (~160 bits) is RECOMMENDED (§11.6). A bounded range gives implementers fixed storage, header and regex sizes.
+- **Generation is per-character, not integer-encoded.** Each secret character is drawn independently and uniformly from the base62 alphabet. This avoids the ~13% of 128-bit integers that would base62-encode to fewer than 22 characters, needs no padding rule, and matches the ASF token standard. The checksum, by contrast, *is* an integer encoding and is zero-padded to 6 characters (§11.6) — the two rules are stated separately on purpose.
+- **Alphabets are defined explicitly** (none are core ABNF rules, RFC 5234 App. B):
+  ```abnf
+  base62     = DIGIT / %x41-5A / %x61-7A      ; 0-9 A-Z a-z, digit values 0..61 in that order
+  ```
+  Base32 is dropped with §11.1, so `base32-lower` is removed rather than defined.
+- **Issuer is a hostname.** Replace `issuer = 1*64(base32-lower)` with the LDH hostname syntax of RFC 1123 §2.1 (labels `%x30-39 / %x61-7A / "-"`, max 63 bytes each, total ≤ 253 bytes, lowercase, IDNs as A-labels per RFC 5891). `_` never appears in a hostname, so the delimiter stays unambiguous. The 64-character cap in v0.1 was too short for either encoding.
+- **Literal strings are case-sensitive.** `orks` and the vendor tag are written with `%s` (RFC 7405) so `ORKS_` is not a valid prefix.
+
+Resulting v0.2 ABNF:
+```abnf
+orks-key   = %s"orks" [vendor-tag] "_" issuer "_" secret "_" check
+vendor-tag = "-" 1*8(DIGIT / %x61-7A)
+issuer     = hostname                        ; RFC 1123 LDH, lowercase, A-labels, <= 253 octets
+secret     = 22*86(base62)                   ; per-character uniform CSPRNG
+check      = 6(base62)                       ; CRC-32 per §11.6, zero-padded
+base62     = DIGIT / %x41-5A / %x61-7A
+```

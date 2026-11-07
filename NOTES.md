@@ -4,6 +4,25 @@ Working notes behind the spec. Newest first. Each entry: what was found, why it 
 
 ---
 
+## 2026-11-06 — Issues #1–#3 (Syndesi, 2026-10-24) → §11.12–11.14
+
+All three are sound and were folded in as proposed resolutions. Draft replies are in `NOTES.md` below; post after review.
+
+- **#3 format underspecified** → §11.14. Strongest of the three. §11.6 had already fixed the checksum; this adds bounded 22–86 secret, per-character generation (avoids the ~13% of 128-bit ints that encode short — verified: 62^21/2^128 = 0.128; CRC-32 short case 62^5/2^32 = 0.213), explicit base62 alphabet/order, hostname-syntax issuer (v0.1's 64 cap was too short), `%s` case-sensitive literals, base32 dropped. Lands before anyone writes a validator.
+- **#2 opaque tokens** → §11.13 + §9 note. Highest adoption leverage: an issuer publishes discovery + endpoint for its *existing* format (`accepted_key_formats`, optional `key_patterns`) and gets quarantine/report/CAEP without reformatting keys. Pairs with the §11.7 report tier as a two-step on-ramp. `key_patterns` is effectively an open, gatekeeper-free version of GitHub partner registration.
+- **#1 RFC 8959** → §11.12. Small clarification: bare key canonical, `secret-token:` MAY wrap, endpoints MUST strip before checksum/lookup, checksum covers bare key only.
+
+### Draft replies (post from the repo owner's account)
+
+**#1**
+> Agreed on all three, and thanks for spotting that every ORKS char is already a `pchar`. Resolved in §11.12 (merged to main): the bare key is canonical; `secret-token:` MAY wrap it for carriage; endpoints and scanners MUST strip the scheme before checksum validation and lookup; the checksum covers the bare key only. Added RFC 8959 to §10 as complementary prior art — it says *that*, ORKS says *whose*. Closing; reopen if the wording misses a case.
+
+**#2**
+> This is the best adoption lever anyone has proposed, so it's now §11.13: the reporter resolves the issuer out of band, fetches `/.well-known/api-key-config`, and POSTs the token as issued; discovery advertises `accepted_key_formats: ["orks","opaque"]` (and optionally `key_patterns` so scanners can route without the prefix — essentially an open version of GitHub partner registration). Checksum-first validation applies to ORKS keys only; §9 now says rate limiting and uniform responses carry anti-enumeration alone for opaque submissions, with a SHOULD for format-length checks and stricter per-IP limits. Together with the new §11.7 report tier this makes "endpoints first, key format later" the default migration path. Closing as resolved in v0.2 text; happy to iterate on the field names.
+
+**#3**
+> You're right on every point, and the padding numbers check out (62^21/2^128 ≈ 12.8% of 128-bit secrets would encode short; 62^5/2^32 ≈ 21.3% of CRC-32s). Resolved across §11.6 and the new §11.14: secret bounded at 22–86 (128–512 bits, 27 RECOMMENDED); per-character uniform generation for the secret, integer encoding zero-padded to 6 for the checksum, stated as separate rules; base62 defined as `DIGIT / %x41-5A / %x61-7A` with digit order 0-9 A-Z a-z; base32 dropped with §11.1 and `issuer` replaced by RFC 1123 LDH hostname syntax with A-labels (≤253 octets — agreed the 64 cap was wrong either way); `%s` for case-sensitive literals. Full v0.2 ABNF is at the end of §11.14. Closing; a reference validator with test vectors is on the open-items list in NOTES.md.
+
 ## 2026-11-06 — Landscape review since v0.1 (Sept 2026)
 
 **Bottom line:** no competing open standard for API-key revocation discovery has appeared; no IETF draft in this space. The field is empty, but the ecosystem is now shipping *ad-hoc* versions of the interfaces ORKS specifies (Truffle's program, GitHub partner forwarding). The risk is a proprietary scanner-side interface becoming de facto before an open issuer-side one exists.
@@ -61,5 +80,6 @@ Working notes behind the spec. Newest first. Each entry: what was found, why it 
 - [ ] Contact Truffle Security re: ORKS as the open interface for both of their integration modes.
 - [ ] File `credential_type: api_key` + opaque-SHA-256 subject proposal with the OpenID Shared Signals WG.
 - [ ] Decide whether §11.7 `report_endpoint` is a v0.2 MUST-advertise-one-of (`report_endpoint` | `revocation_endpoint`) or stays optional.
+- [ ] Post the three issue replies above; close #1–#3.
 - [ ] Reference implementation: a ~50-line validator (regex + CRC-32) scanners can vendor; publish test vectors alongside.
 - [ ] Fold §11.1 (raw domain) and §11.6 (checksum) into §3 for the v0.2 draft rather than leaving them as resolved open questions.
