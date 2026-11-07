@@ -15,13 +15,13 @@ All three are sound and were folded in as proposed resolutions. Draft replies ar
 ### Draft replies (post from the repo owner's account)
 
 **#1**
-> Agreed on all three, and thanks for spotting that every ORKS char is already a `pchar`. Resolved in §11.12 (merged to main): the bare key is canonical; `secret-token:` MAY wrap it for carriage; endpoints and scanners MUST strip the scheme before checksum validation and lookup; the checksum covers the bare key only. Added RFC 8959 to §10 as complementary prior art — it says *that*, ORKS says *whose*. Closing; reopen if the wording misses a case.
+> Agreed on all three, and thanks for spotting that every ORKS char is already a `pchar`. Resolved in §11.12 (PR #5): the bare key is canonical; `secret-token:` MAY wrap it for carriage; endpoints and scanners MUST strip the scheme before checksum validation and lookup; the checksum covers the bare key only. Added RFC 8959 to §10 as complementary prior art — it says *that*, ORKS says *whose*. Closing; reopen if the wording misses a case.
 
 **#2**
-> This is the best adoption lever anyone has proposed, so it's now §11.13: the reporter resolves the issuer out of band, fetches `/.well-known/api-key-config`, and POSTs the token as issued; discovery advertises `accepted_key_formats: ["orks","opaque"]` (and optionally `key_patterns` so scanners can route without the prefix — essentially an open version of GitHub partner registration). Checksum-first validation applies to ORKS keys only; §9 now says rate limiting and uniform responses carry anti-enumeration alone for opaque submissions, with a SHOULD for format-length checks and stricter per-IP limits. Together with the new §11.7 report tier this makes "endpoints first, key format later" the default migration path. Closing as resolved in v0.2 text; happy to iterate on the field names.
+> This is the best adoption lever anyone has proposed, so it's now §11.13 (PR #5): the reporter resolves the issuer out of band, fetches `/.well-known/api-key-config`, and POSTs the token as issued; discovery advertises `accepted_key_formats: ["orks","opaque"]` (and optionally `key_patterns` so scanners can route without the prefix — essentially an open version of GitHub partner registration). Checksum-first validation applies to ORKS keys only; §9 now says rate limiting and uniform responses carry anti-enumeration alone for opaque submissions, with a SHOULD for format-length checks and stricter per-IP limits. Together with the new §11.7 report tier this makes "endpoints first, key format later" the default migration path. Closing as resolved in v0.2 text; happy to iterate on the field names.
 
 **#3**
-> You're right on every point, and the padding numbers check out (62^21/2^128 ≈ 12.8% of 128-bit secrets would encode short; 62^5/2^32 ≈ 21.3% of CRC-32s). Resolved across §11.6 and the new §11.14: secret bounded at 22–86 (128–512 bits, 27 RECOMMENDED); per-character uniform generation for the secret, integer encoding zero-padded to 6 for the checksum, stated as separate rules; base62 defined as `DIGIT / %x41-5A / %x61-7A` with digit order 0-9 A-Z a-z; base32 dropped with §11.1 and `issuer` replaced by RFC 1123 LDH hostname syntax with A-labels (≤253 octets — agreed the 64 cap was wrong either way); `%s` for case-sensitive literals. Full v0.2 ABNF is at the end of §11.14. Closing; a reference validator with test vectors is on the open-items list in NOTES.md.
+> You're right on every point, and the padding numbers check out (62^21/2^128 ≈ 12.8% of 128-bit secrets would encode short; 62^5/2^32 ≈ 21.3% of CRC-32s). Resolved across §11.6 and the new §11.14 (PR #5): secret bounded at 22–86 (128–512 bits, 27 RECOMMENDED); per-character uniform generation for the secret, integer encoding zero-padded to 6 for the checksum, stated as separate rules; base62 defined as `DIGIT / %x41-5A / %x61-7A` with digit order 0-9 A-Z a-z; base32 dropped with §11.1 and `issuer` replaced by RFC 1123 LDH hostname syntax with A-labels (≤253 octets — agreed the 64 cap was wrong either way); `%s` for case-sensitive literals. Full v0.2 ABNF is at the end of §11.14. Closing; a reference validator with test vectors is on the open-items list in NOTES.md.
 
 ## 2026-11-06 — Landscape review since v0.1 (Sept 2026)
 
@@ -76,10 +76,15 @@ All three are sound and were folded in as proposed resolutions. Draft replies ar
 - Gitee exposure (Oct 2026): 26,400 valid cloud + AI credentials in public repos, incl. OpenAI and DeepSeek. More motivation data. https://thehackernews.com/2026/10/26400-valid-cloud-and-ai-credentials.html
 - Coverage of ORKS v0.1: SecurityWeek (2026-09-09), Polish/Dutch trade press, news4hackers, Offseq radar. No substantive public critique found yet.
 
+### Review corrections (2026-11-06, post-draft)
+- §11.8: quarantine now maps to CAEP `change_type: "update"`, not `revoke` (key is still live); `reason_admin` restricted to language-tag text per CAEP, ORKS fields moved to `orks_*` claims; webhook payload is a signed SET.
+- §11.9: the CCS paper's two 84% figures (first-party; JavaScript) were conflated — fixed.
+- §11.6: noted that the checksum input span (issuer included) deliberately differs from ASF (entropy only).
+- Unflagged changes worth knowing: §11.14 narrows `vendor-tag` to lowercase; §11.14 treats §11.1 as decided and drops base32; §9's AWS-quarantine point is motivation, not a claim AWS's policy failed at something it promised; Truffle figures are from trade-press summaries of Truffle's own announcement.
+
 ### Open items
 - [ ] Contact Truffle Security re: ORKS as the open interface for both of their integration modes.
 - [ ] File `credential_type: api_key` + opaque-SHA-256 subject proposal with the OpenID Shared Signals WG.
 - [ ] Decide whether §11.7 `report_endpoint` is a v0.2 MUST-advertise-one-of (`report_endpoint` | `revocation_endpoint`) or stays optional.
-- [ ] Post the three issue replies above; close #1–#3.
 - [ ] Reference implementation: a ~50-line validator (regex + CRC-32) scanners can vendor; publish test vectors alongside.
 - [ ] Fold §11.1 (raw domain) and §11.6 (checksum) into §3 for the v0.2 draft rather than leaving them as resolved open questions.

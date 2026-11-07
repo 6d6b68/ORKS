@@ -225,7 +225,7 @@ Added for v0.2 (see `NOTES.md` for details and links):
 
 **Proposed: adopt the ASF scannable-token CRC-32 encoding verbatim, with published test vectors.** v0.1 says "CRC32 of the preceding segments, base62-encoded" and leaves polynomial, input bytes, digit order and padding implicit — enough ambiguity that two independent scanners could disagree on a valid key. The Apache Software Foundation's draft token standard (`asf_{component}_{27×base62}{6×base62}`) has already nailed this down, and sharing one validator across both formats is worth more than any marginal design freedom. Resolution for v0.2:
 
-- Input: the ASCII bytes of everything before the final `_` (i.e. `orks[-tag]_{issuer}_{secret}`), not decoded binary.
+- Input: the ASCII bytes of everything before the final `_` (i.e. `orks[-tag]_{issuer}_{secret}`), not decoded binary. *Note: this deliberately differs from ASF, which checksums the entropy segment only; ORKS covers the issuer so a corrupted or tampered issuer segment also fails the check. A shared validator needs one branch on the prefix to pick the input span.*
 - Algorithm: IEEE 802.3 CRC-32 — reflected polynomial `0xEDB88320`, init `0xFFFFFFFF`, final XOR `0xFFFFFFFF` (what `zlib.crc32` computes).
 - Encoding: base62 (`0-9A-Za-z`), most-significant digit first, left-padded with `0` to exactly 6 characters. The maximum CRC-32 encodes as `4gfFC3`, so the first checksum character is always `0–4`; scanners MAY use that as a cheap pre-filter.
 - Reference vector (ASF, checksum over 27 ASCII `0`s): `2MvMGi`. ORKS vector: `orks_api.example.com_4Zq9mLpX2vR7tK1sB8nW3cD6fH0jY5aE` → check `15KzgI`.
@@ -251,15 +251,17 @@ Added for v0.2 (see `NOTES.md` for details and links):
 
 | ORKS transition | CAEP event | Fields |
 |---|---|---|
-| ACTIVE → QUARANTINED | `credential-change` | `change_type: "revoke"`, `reason_admin: {en: "quarantined: <reason>", evidence_url, hard_revoke_at}` |
-| QUARANTINED → REVOKED, ACTIVE → REVOKED | `credential-change` | `change_type: "revoke"`, `reason_admin` carrying the §5.1 `reason` |
-| QUARANTINED → ACTIVE (owner cancel) | `credential-change` | `change_type: "update"` (restrictions lifted), `reason_admin: {en: "quarantine cancelled by owner"}` |
+| ACTIVE → QUARANTINED | `credential-change` | `change_type: "update"` (restrictions applied; the credential is still live), `reason_admin: {"en": "quarantined: <reason>"}`, plus ORKS event claims `orks_state: "quarantined"`, `orks_hard_revoke_at`, `orks_evidence_url` |
+| QUARANTINED → REVOKED, ACTIVE → REVOKED | `credential-change` | `change_type: "revoke"`, `reason_admin: {"en": "<§5.1 reason>"}`, `orks_state: "revoked"` |
+| QUARANTINED → ACTIVE (owner cancel) | `credential-change` | `change_type: "update"` (restrictions lifted), `reason_admin: {"en": "quarantine cancelled by owner"}`, `orks_state: "active"` |
 
-Gaps to raise with the OpenID Shared Signals WG: (a) `credential_type` has no value for API keys — propose `api_key`; (b) the interop profile mandates `email` and `iss_sub` subject identifiers, neither of which fits a bearer key — propose an `opaque` subject whose `id` is the base64url SHA-256 of the full key string, which identifies the key to its owner without disclosing it. Until adopted, issuers SHOULD use `opaque` with that construction and document it in discovery (`"event_subject_format": "sha256-key"`). Plain HTTPS webhook delivery remains a MAY, using the same SET payload unsigned-or-signed.
+`reason_admin` is a language-tag-keyed object per CAEP and carries human text only; machine-readable ORKS fields travel as separate `orks_*` claims in the event payload. Receivers that don't understand them ignore them (SET extensibility). `revoke` is used only when the credential actually stops working — a receiver MUST be able to rely on that.
+
+Gaps to raise with the OpenID Shared Signals WG: (a) `credential_type` has no value for API keys — propose `api_key`; (b) the interop profile mandates `email` and `iss_sub` subject identifiers, neither of which fits a bearer key — propose an `opaque` subject whose `id` is the base64url SHA-256 of the full key string, which identifies the key to its owner without disclosing it. Until adopted, issuers SHOULD use `opaque` with that construction and document it in discovery (`"event_subject_format": "sha256-key"`). Plain HTTPS webhook delivery remains a MAY, carrying the same signed SET payload (RFC 8417; the interop profile requires RS256 ≥ 2048-bit).
 
 ### 11.9 Publishable (intentionally client-side) key class
 
-**Proposed: add a `publishable` key-class marker so scanners can deprioritize keys that are meant to be exposed.** The CCS 2026 web-exposure study found 84% of live credentials on the web sat in first-party JavaScript, 62% of those in build bundles, and that site operators often believed the key was safe to ship. Stripe's `pk_`/`sk_` split is the working precedent. Resolution: issuers MAY issue keys with vendor tag `orks-pk` (within the existing `vendor-tag` grammar) and MUST declare in discovery which tags are publishable:
+**Proposed: add a `publishable` key-class marker so scanners can deprioritize keys that are meant to be exposed.** The CCS 2026 web-exposure study found 84% of live web credentials in first-party resources, 84% in JavaScript files (62% of those in build bundles), and that site operators often believed the key was safe to ship. Stripe's `pk_`/`sk_` split is the working precedent. Resolution: issuers MAY issue keys with vendor tag `orks-pk` (within the existing `vendor-tag` grammar) and MUST declare in discovery which tags are publishable:
 
 ```json
 "publishable_tags": ["pk"]
