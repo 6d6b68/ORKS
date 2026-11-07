@@ -7,6 +7,8 @@ Open standard API Spec - ORKS (Open Revocable Key Standard)
 **Draft v0.1 — Discussion Document**
 Status: Pre-standard sketch, seeking feedback
 Requirement keywords (MUST, SHOULD, MAY) per RFC 2119.
+
+> Canonical source, discussion, and proposed changes live at **[github.com/6d6b68/ORKS](https://github.com/6d6b68/ORKS)** — open an issue or PR to weigh in. Background: [*This Key Will Self-Destruct*](https://www.securityweek.com/this-key-will-self-destruct-an-open-standard-for-revocable-api-keys/) (SecurityWeek, Sept 2026).
  
 ---
  
