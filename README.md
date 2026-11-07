@@ -179,12 +179,20 @@ This turns key hygiene into an auditable procurement question: "does this vendor
  
 - **Revocation DoS / griefing**: mitigated by quarantine delay (§6), rate limiting, and full-key requirement. Vault/OpenBao chose to authenticate their proof-of-possession revocation endpoint for exactly this reason; ORKS instead keeps the endpoint open (so strangers can act on leaks) and absorbs the risk with delay + restriction.
 - **Enumeration**: uniform `200 accepted` responses, full-key requirement, checksum-first validation.
-- **Attacker-visible prefixes**: self-identifying keys are also easier for attackers to grep. This trade is accepted: attackers already fingerprint keys by entropy and context; identifiability primarily accelerates defenders and automated scanners.
+- **Attacker-visible prefixes**: self-identifying keys are also easier for attackers to grep. This trade is accepted: attackers already fingerprint keys by entropy and context; identifiability primarily accelerates defenders and automated scanners. As of late 2026 this objection is weaker still: GitHub's push protection now catches secrets with *no* known pattern via a context-aware classifier, so a prefix buys attackers little detection value they didn't already have. The prefix's value is attribution and routing — getting a found key to the right revocation endpoint — not detection.
+- **"Quarantined but still live" is a failure mode, not a safe state**: Truffle Security's 2026 re-verification found 929 leaked AWS keys still working that AWS had already placed under its compromised-key quarantine policy, some more than three years earlier. ORKS quarantine therefore has a mandatory hard-revoke at timer expiry (§6.2, MUST NOT exceed 72h); an issuer MUST NOT implement quarantine as an indefinite restricted state.
 - **Delay window is attacker window**: if the leak is real, quarantine leaves a restricted-but-live key for up to the delay period. §6.2's restriction requirement exists to shrink this; issuers with low tolerance should advertise and use `immediate`.
 - **Notification channel compromise**: if the attacker controls the owner's email, they could cancel quarantine. Cancellation therefore requires the authenticated dashboard, not an email link.
 ## 10. Prior Art
  
 RFC 7009 (OAuth token revocation), RFC 8615 (well-known URIs), RFC 9116 (security.txt), OIDC Discovery, GitHub Secret Scanning Partner Program, GitHub token prefixes + CRC32 checksums, Stripe key prefixes, Vault/OpenBao PoP certificate revocation.
+
+Added for v0.2 (see `NOTES.md` for details and links):
+
+- **ASF Scannable Secret Token Standard (draft, 2026)** — `asf_{component}_{27×base62}{6×base62 CRC-32}`; a fully specified checksum with test vectors. ORKS adopts its CRC-32 encoding (§11.6).
+- **Truffle Security Secrets Revocation Program (Nov 2026)** — issuer-side revocation endpoint or webhook with a 14-day revoke-or-explain SLA; 16 issuers at launch. Proprietary and scanner-centric, but the closest deployed analogue to §5 (§11.7).
+- **OpenID CAEP Interoperability Profile 1.0 draft 01 (Jul 2026)** — standardizes the `credential-change` event ORKS maps quarantine/revoke transitions onto (§11.2, §11.8).
+- **Demir et al., "Keys on Doormats: Exposed API Credentials on the Web" (CCS 2026)** — 11.9M-hostname measurement; distinctive key formats verify at much higher rates; notification yields removal far more often than revocation (§11.9).
  
 ## 11. Open Questions and Proposed Resolutions
  
@@ -208,3 +216,62 @@ RFC 7009 (OAuth token revocation), RFC 8615 (well-known URIs), RFC 9116 (securit
  
 **Proposed: subcomponents for identifiers** Ability to drill down into business units within the same organization to help with identification (input from speakeasy.com)
 
+
+### 11.6 Checksum algorithm: specify it exactly
+
+**Proposed: adopt the ASF scannable-token CRC-32 encoding verbatim, with published test vectors.** v0.1 says "CRC32 of the preceding segments, base62-encoded" and leaves polynomial, input bytes, digit order and padding implicit — enough ambiguity that two independent scanners could disagree on a valid key. The Apache Software Foundation's draft token standard (`asf_{component}_{27×base62}{6×base62}`) has already nailed this down, and sharing one validator across both formats is worth more than any marginal design freedom. Resolution for v0.2:
+
+- Input: the ASCII bytes of everything before the final `_` (i.e. `orks[-tag]_{issuer}_{secret}`), not decoded binary.
+- Algorithm: IEEE 802.3 CRC-32 — reflected polynomial `0xEDB88320`, init `0xFFFFFFFF`, final XOR `0xFFFFFFFF` (what `zlib.crc32` computes).
+- Encoding: base62 (`0-9A-Za-z`), most-significant digit first, left-padded with `0` to exactly 6 characters. The maximum CRC-32 encodes as `4gfFC3`, so the first checksum character is always `0–4`; scanners MAY use that as a cheap pre-filter.
+- Reference vector (ASF, checksum over 27 ASCII `0`s): `2MvMGi`. ORKS vector: `orks_api.example.com_4Zq9mLpX2vR7tK1sB8nW3cD6fH0jY5aE` → check `15KzgI`.
+- Secret length: RECOMMENDED 27 base62 characters (~160 bits), matching ASF; the §3.2 range (22–86) stays as the MUST.
+- Character set stays within the `token68` production (RFC 9110 §11.2) so keys can be carried in DPoP / `Authorization` headers unmodified.
+
+### 11.7 Report endpoint: a notify-only tier below quarantine
+
+**Proposed: add an optional `report_endpoint` with an advertised SLA, as a standard on-ramp for issuers who will not open an unauthenticated kill switch.** Truffle Security's revocation program (Nov 2026) offers issuers exactly two integration modes — "we call your revocation endpoint" or "we webhook you and you revoke within 14 days" — and 16 issuers signed up at launch. The second mode is what most issuers will accept first. ORKS can standardize it so the webhook isn't bespoke per scanner:
+
+```json
+"report_endpoint": "https://api.example.com/orks/report",
+"report_sla_seconds": 1209600
+```
+
+- Same request body as §5.1. Same uniform `200 accepted` (anti-enumeration). No authentication required.
+- The issuer commits to revoke, quarantine, or respond with a documented reason within `report_sla_seconds` (RECOMMENDED ≤ 14 days, matching current industry practice).
+- An issuer MAY serve `report_endpoint` without `revocation_endpoint` during adoption; the discovery document makes which tier it offers auditable with one GET. Issuers SHOULD treat this as a stepping stone to quarantine, not a destination — the data in §11.9 shows notification alone rarely produces revocation.
+
+### 11.8 CAEP mapping for quarantine/revoke events (resolves §11.2)
+
+**Proposed: map ORKS state transitions onto CAEP `credential-change` per the CAEP Interoperability Profile 1.0 (draft 01, July 2026).** The profile makes `credential-change` one of three conformance use cases, requires receivers to handle every `change_type`/`credential_type`, and requires a non-empty `reason_admin`. Mapping:
+
+| ORKS transition | CAEP event | Fields |
+|---|---|---|
+| ACTIVE → QUARANTINED | `credential-change` | `change_type: "revoke"`, `reason_admin: {en: "quarantined: <reason>", evidence_url, hard_revoke_at}` |
+| QUARANTINED → REVOKED, ACTIVE → REVOKED | `credential-change` | `change_type: "revoke"`, `reason_admin` carrying the §5.1 `reason` |
+| QUARANTINED → ACTIVE (owner cancel) | `credential-change` | `change_type: "update"` (restrictions lifted), `reason_admin: {en: "quarantine cancelled by owner"}` |
+
+Gaps to raise with the OpenID Shared Signals WG: (a) `credential_type` has no value for API keys — propose `api_key`; (b) the interop profile mandates `email` and `iss_sub` subject identifiers, neither of which fits a bearer key — propose an `opaque` subject whose `id` is the base64url SHA-256 of the full key string, which identifies the key to its owner without disclosing it. Until adopted, issuers SHOULD use `opaque` with that construction and document it in discovery (`"event_subject_format": "sha256-key"`). Plain HTTPS webhook delivery remains a MAY, using the same SET payload unsigned-or-signed.
+
+### 11.9 Publishable (intentionally client-side) key class
+
+**Proposed: add a `publishable` key-class marker so scanners can deprioritize keys that are meant to be exposed.** The CCS 2026 web-exposure study found 84% of live credentials on the web sat in first-party JavaScript, 62% of those in build bundles, and that site operators often believed the key was safe to ship. Stripe's `pk_`/`sk_` split is the working precedent. Resolution: issuers MAY issue keys with vendor tag `orks-pk` (within the existing `vendor-tag` grammar) and MUST declare in discovery which tags are publishable:
+
+```json
+"publishable_tags": ["pk"]
+```
+
+A publishable key MUST be origin- or referrer-bound (`referrer` constraint, §8), rate-limited, and non-destructive. Scanners SHOULD report publishable keys at informational severity only. Revocation semantics are unchanged — a publishable key is still revocable by possession.
+
+### 11.10 Agents MUST NOT cancel their own quarantine
+
+**Proposed: an explicit norm for autonomous holders.** §6.5 lets agents self-revoke on task completion. The inverse must be ruled out: an agent that holds a quarantined key, or has dashboard credentials, MUST NOT cancel or extend a quarantine without a human in the loop — the same rule GitHub now applies to agents bypassing push protection. Cancellation is a human acknowledgment of leak evidence by definition (§6.3). Orchestration frameworks SHOULD treat an ORKS quarantine notification as a hard stop for the affected task and surface it for human review rather than retrying with the restricted key.
+
+### 11.11 Motivation data to carry into v0.2 (§2)
+
+Measurements published since v0.1 that make the §2 case concretely:
+
+- Truffle Security (2026): 81% of valid keys reported to owners/issuers in 2025 were still usable six months later; of 64,024 leaked AWS keys re-verified in Aug 2026, 88% were still active, median age ~5 years, 768 with full admin rights.
+- Demir et al., CCS 2026: exposed credentials stayed public ~12 months on average; after notification, removals fell ~50% by day 14 but revocations only ~26% — removal without revocation is the common outcome.
+- The same study: services with distinctive key formats verify at far higher rates (Telegram 85%), while GitHub's broad pattern produced most false positives — direct support for §3's self-identifying format plus a validated checksum (§11.6).
+- GitHub (Oct 2026): push protection now blocks Anthropic API keys by default and runs a context-aware classifier that catches unpatterned secrets — detection is no longer the bottleneck; attribution and revocation are.
