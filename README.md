@@ -4,7 +4,7 @@ Open standard API Spec - ORKS (Open Revocable Key Standard)
 
 # Open Revocable Key Standard (ORKS)
  
-**Draft v0.1 — Discussion Document**
+**Draft v0.2 — Discussion Document** (November 2026; supersedes v0.1, September 2026)
 Status: Pre-standard sketch, seeking feedback
 Requirement keywords (MUST, SHOULD, MAY) per RFC 2119.
 
@@ -64,7 +64,7 @@ Example:
  
 ```json
 {
-  "orks_version": "0.1",
+  "orks_version": "0.2",
   "issuer": "api.example.com",
   "revocation_endpoint": "https://api.example.com/orks/revoke",
   "introspection_endpoint": "https://api.example.com/orks/introspect",
