@@ -1,6 +1,12 @@
 # ORKS
 Open standard API Spec - ORKS (Open Revocable Key Standard)
 
+<p align="center">
+  <img src="docs/orks-overview.png" alt="ORKS overview: a leaked key is detected in a public commit, the self-identifying key reveals its issuer, the client fetches the issuer's well-known discovery document, POSTs the key to the revocation endpoint, and the key is inactivated" width="720">
+</p>
+
+*Figure: end-to-end flow from leak detection to automated revocation. Illustrative — normative field names, paths and response codes are those in §3–§5 below.*
+
 
 # Open Revocable Key Standard (ORKS)
  
