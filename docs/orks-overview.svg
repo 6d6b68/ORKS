@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="1150" viewBox="0 0 880 1150" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7aa2f7"/>
+    </marker>
+    <marker id="arr-dim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7a99"/>
+    </marker>
+    <style>
+      .h1 { font-size: 26px; font-weight: 700; fill: #e6edf3; letter-spacing: 1px; }
+      .sub { font-size: 15px; fill: #aab4c3; }
+      .step { font-size: 17px; font-weight: 700; fill: #e6edf3; }
+      .num { fill: #f0883e; }
+      .body { fill: #aab4c3; font-size: 13.5px; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; fill: #e6edf3; }
+      .mono-sm { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; fill: #aab4c3; }
+      .key { fill: #f0883e; }
+      .kw { fill: #7aa2f7; }
+      .str { fill: #9ece6a; }
+      .box { fill: #161b27; stroke: #2d3748; stroke-width: 1.2; }
+      .box-hdr { fill: #1f2636; }
+      .tag { fill: #0f141f; stroke: #3b4a66; }
+      .edge { stroke: #7aa2f7; stroke-width: 1.6; fill: none; }
+      .edge-dim { stroke: #6b7a99; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+      .state { fill: #0f141f; stroke-width: 1.6; }
+      .lbl { font-size: 12.5px; fill: #8b96ab; }
+      .ok { fill: #3fb950; }
+      .bad { fill: #f85149; }
+    </style>
+  </defs>
+
+  <rect width="880" height="1150" fill="#0d1117"/>
+
+  <text x="440" y="54" text-anchor="middle" class="h1">OPEN REVOCABLE KEY STANDARD (ORKS)</text>
+  <line x1="150" y1="68" x2="730" y2="68" stroke="#2d3748"/>
+  <text x="440" y="94" text-anchor="middle" class="sub">Anyone who finds a leaked API key can shut it off in seconds —</text>
+  <text x="440" y="114" text-anchor="middle" class="sub">no emails, no support tickets, no waiting.</text>
+
+  <!-- Step 1 -->
+  <g transform="translate(40,150)">
+    <rect width="300" height="130" rx="8" class="box"/>
+    <rect width="300" height="28" rx="8" class="box-hdr"/>
+    <rect y="14" width="300" height="14" class="box-hdr"/>
+    <circle cx="16" cy="14" r="4" fill="#ff5f57"/><circle cx="30" cy="14" r="4" fill="#febc2e"/><circle cx="44" cy="14" r="4" fill="#28c840"/>
+    <text x="150" y="19" text-anchor="middle" class="mono-sm">public code repository</text>
+    <text x="16" y="54" class="mono-sm">const API_KEY =</text>
+    <rect x="12" y="64" width="276" height="26" rx="4" fill="#1c1410" stroke="#f0883e" stroke-width="1.2"/>
+    <text x="150" y="82" text-anchor="middle" class="mono key">orks_api.example.com_4Zq9…_15KzgI</text>
+    <text x="16" y="112" class="mono-sm">// oops — this should be private</text>
+  </g>
+  <text x="40" y="308" class="step"><tspan class="num">1.</tspan> A key leaks</text>
+  <text x="40" y="330" class="body">Someone accidentally publishes an API key — in code,</text>
+  <text x="40" y="348" class="body">a log file, or a paste site. A scanner or a person spots it.</text>
+
+  <path d="M345,215 L405,215" class="edge" marker-end="url(#arr)"/>
+
+  <!-- Step 2 -->
+  <g transform="translate(410,150)">
+    <rect width="430" height="130" rx="8" class="box"/>
+    <text x="16" y="26" class="step" font-size="14">What's inside an ORKS key</text>
+    <g transform="translate(16,42)">
+      <rect width="70" height="30" rx="4" class="tag"/>
+      <text x="35" y="20" text-anchor="middle" class="mono">orks</text>
+      <text x="76" y="20" class="mono" fill="#6b7a99">_</text>
+      <rect x="86" width="150" height="30" rx="4" class="tag"/>
+      <text x="161" y="20" text-anchor="middle" class="mono kw">api.example.com</text>
+      <text x="240" y="20" class="mono" fill="#6b7a99">_</text>
+      <rect x="250" width="86" height="30" rx="4" class="tag"/>
+      <text x="293" y="20" text-anchor="middle" class="mono">secret</text>
+      <text x="340" y="20" class="mono" fill="#6b7a99">_</text>
+      <rect x="350" width="48" height="30" rx="4" class="tag"/>
+      <text x="374" y="20" text-anchor="middle" class="mono">check</text>
+    </g>
+    <text x="51" y="92" text-anchor="middle" class="lbl">"this is an</text>
+    <text x="51" y="106" text-anchor="middle" class="lbl">ORKS key"</text>
+    <text x="177" y="92" text-anchor="middle" class="lbl">who issued it —</text>
+    <text x="177" y="106" text-anchor="middle" class="lbl">readable by anyone</text>
+    <text x="309" y="92" text-anchor="middle" class="lbl">the actual</text>
+    <text x="309" y="106" text-anchor="middle" class="lbl">password part</text>
+    <text x="390" y="92" text-anchor="middle" class="lbl">catches</text>
+    <text x="390" y="106" text-anchor="middle" class="lbl">typos</text>
+  </g>
+  <text x="410" y="308" class="step"><tspan class="num">2.</tspan> The key says who issued it</text>
+  <text x="410" y="330" class="body">No guessing which company to contact — the key spells it out.</text>
+  <text x="410" y="348" class="body">Works offline, with no central directory.</text>
+
+  <path d="M840,215 L862,215 L862,425 L785,425 L785,438" class="edge" marker-end="url(#arr)"/>
+
+  <!-- Step 3 -->
+  <text x="440" y="420" text-anchor="middle" class="step"><tspan class="num">3.</tspan> Look up the shut-off switch</text>
+
+  <g transform="translate(50,450)">
+    <rect width="90" height="56" rx="5" fill="#0f141f" stroke="#3b4a66" stroke-width="1.4"/>
+    <rect x="-8" y="56" width="106" height="8" rx="2" fill="#1f2636" stroke="#3b4a66"/>
+    <text x="45" y="90" text-anchor="middle" class="body">Whoever</text>
+    <text x="45" y="106" text-anchor="middle" class="body">found the key</text>
+  </g>
+  <g transform="translate(740,440)">
+    <rect width="90" height="76" rx="5" fill="#0f141f" stroke="#3b4a66" stroke-width="1.4"/>
+    <circle cx="15" cy="12" r="3" fill="#ff5f57"/><circle cx="26" cy="12" r="3" fill="#febc2e"/><circle cx="37" cy="12" r="3" fill="#28c840"/>
+    <text x="45" y="42" text-anchor="middle" class="mono" fill="#7aa2f7">&lt;/&gt;</text>
+    <text x="45" y="62" text-anchor="middle" class="mono-sm">issuer</text>
+    <text x="45" y="100" text-anchor="middle" class="body">api.example.com</text>
+  </g>
+
+  <g transform="translate(170,440)">
+    <rect width="540" height="30" rx="6" class="tag"/>
+    <text x="12" y="20" class="mono"><tspan class="kw">GET</tspan> https://<tspan class="key">api.example.com</tspan>/.well-known/api-key-config</text>
+  </g>
+  <path d="M150,455 L168,455" class="edge"/>
+  <path d="M712,455 L738,455" class="edge" marker-end="url(#arr)"/>
+
+  <g transform="translate(170,482)">
+    <rect width="540" height="76" rx="6" class="box"/>
+    <text x="12" y="22" class="body">Every ORKS issuer publishes a small file at this standard address that says:</text>
+    <text x="24" y="44" class="body">• <tspan fill="#e6edf3">where</tspan> to send a revocation request</text>
+    <text x="24" y="62" class="body">• <tspan fill="#e6edf3">how fast</tspan> a reported key gets shut off, and whether the owner gets a grace period</text>
+  </g>
+  <path d="M738,520 L712,520" class="edge" marker-end="url(#arr)"/>
+  <path d="M168,520 L150,520" class="edge" marker-end="url(#arr)"/>
+
+  <!-- Step 4 -->
+  <text x="440" y="620" text-anchor="middle" class="step"><tspan class="num">4.</tspan> Report the key</text>
+
+  <g transform="translate(50,650)">
+    <rect width="90" height="56" rx="5" fill="#0f141f" stroke="#3b4a66" stroke-width="1.4"/>
+    <rect x="-8" y="56" width="106" height="8" rx="2" fill="#1f2636" stroke="#3b4a66"/>
+    <text x="45" y="90" text-anchor="middle" class="body">Whoever</text>
+    <text x="45" y="106" text-anchor="middle" class="body">found the key</text>
+  </g>
+  <g transform="translate(740,640)">
+    <rect width="90" height="76" rx="5" fill="#0f141f" stroke="#3b4a66" stroke-width="1.4"/>
+    <circle cx="15" cy="12" r="3" fill="#ff5f57"/><circle cx="26" cy="12" r="3" fill="#febc2e"/><circle cx="37" cy="12" r="3" fill="#28c840"/>
+    <text x="45" y="42" text-anchor="middle" class="mono" fill="#7aa2f7">&lt;/&gt;</text>
+    <text x="45" y="62" text-anchor="middle" class="mono-sm">issuer</text>
+  </g>
+
+  <g transform="translate(170,640)">
+    <rect width="540" height="52" rx="6" class="tag"/>
+    <text x="12" y="20" class="mono"><tspan class="kw">POST</tspan> https://api.example.com/orks/revoke</text>
+    <text x="12" y="40" class="mono">{ <tspan class="str">"key"</tspan>: <tspan class="key">"orks_api.example.com_4Zq9…_15KzgI"</tspan>, <tspan class="str">"reason"</tspan>: <tspan class="str">"leaked"</tspan> }</text>
+  </g>
+  <path d="M150,666 L168,666" class="edge"/>
+  <path d="M712,666 L738,666" class="edge" marker-end="url(#arr)"/>
+
+  <g transform="translate(170,704)">
+    <rect width="540" height="30" rx="6" class="box"/>
+    <text x="12" y="20" class="mono"><tspan class="ok">200 OK</tspan>  { <tspan class="str">"status"</tspan>: <tspan class="str">"accepted"</tspan> }</text>
+  </g>
+  <path d="M738,719 L712,719" class="edge" marker-end="url(#arr)"/>
+  <path d="M168,719 L150,719" class="edge" marker-end="url(#arr)"/>
+
+  <text x="170" y="762" class="body"><tspan fill="#e6edf3">No login needed.</tspan> If you have the key, you can report it — anyone who can report it could already misuse it.</text>
+  <text x="170" y="782" class="body"><tspan fill="#e6edf3">The reply is always the same,</tspan> so attackers can't use this to check whether a guessed key is real.</text>
+
+  <!-- Step 5 -->
+  <text x="440" y="846" text-anchor="middle" class="step"><tspan class="num">5.</tspan> The key gets shut off</text>
+
+  <g transform="translate(60,900)">
+    <rect width="130" height="44" rx="22" class="state" stroke="#3fb950"/>
+    <text x="65" y="27" text-anchor="middle" class="mono" font-weight="700">WORKING</text>
+  </g>
+  <g transform="translate(345,900)">
+    <rect width="190" height="44" rx="22" class="state" stroke="#e3b341"/>
+    <text x="95" y="27" text-anchor="middle" class="mono" font-weight="700">QUARANTINED</text>
+  </g>
+  <g transform="translate(690,900)">
+    <rect width="130" height="44" rx="22" class="state" stroke="#f85149"/>
+    <text x="65" y="27" text-anchor="middle" class="mono" font-weight="700">SHUT OFF</text>
+  </g>
+
+  <path d="M190,922 L343,922" class="edge" marker-end="url(#arr)"/>
+  <text x="266" y="958" text-anchor="middle" class="lbl">usual path for outside reports</text>
+  <path d="M535,922 L688,922" class="edge" marker-end="url(#arr)"/>
+  <text x="612" y="958" text-anchor="middle" class="lbl">automatically, within a day</text>
+  <path d="M125,900 C125,872 755,872 755,898" class="edge" marker-end="url(#arr)"/>
+  <text x="440" y="874" text-anchor="middle" class="lbl" fill="#7aa2f7">instantly — when the owner asks, or for throwaway keys</text>
+  <path d="M400,944 C400,1000 160,1000 160,946" class="edge-dim" marker-end="url(#arr-dim)"/>
+  <text x="280" y="1008" text-anchor="middle" class="lbl">owner can cancel if it's a false alarm (a human must do this)</text>
+  <path d="M480,944 C480,1000 720,1000 720,946" class="edge-dim" marker-end="url(#arr-dim)"/>
+  <text x="600" y="1008" text-anchor="middle" class="lbl">owner can shut it off now</text>
+
+  <g transform="translate(300,1030)">
+    <rect x="-50" width="380" height="72" rx="6" class="box" stroke="#e3b341" stroke-opacity="0.5"/>
+    <text x="140" y="20" text-anchor="middle" class="body" fill="#e3b341" font-weight="700">While quarantined</text>
+    <text x="140" y="40" text-anchor="middle" class="lbl">the owner is alerted immediately, with the evidence</text>
+    <text x="140" y="56" text-anchor="middle" class="lbl">the key is restricted: read-only, slowed, nothing destructive</text>
+  </g>
+  <text x="110" y="1070" text-anchor="middle" class="body"><tspan class="ok" font-weight="700">✓</tspan> Leak neutralized</text>
+  <text x="110" y="1088" text-anchor="middle" class="lbl">in seconds, not days</text>
+  <text x="770" y="1070" text-anchor="middle" class="body"><tspan class="bad" font-weight="700">■</tspan> Gone for good</text>
+  <text x="770" y="1088" text-anchor="middle" class="lbl">quarantine always ends in shut-off</text>
+
+  <line x1="40" y1="1122" x2="840" y2="1122" stroke="#2d3748"/>
+  <text x="440" y="1142" text-anchor="middle" class="mono-sm">github.com/6d6b68/ORKS</text>
+</svg>

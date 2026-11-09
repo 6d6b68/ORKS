@@ -1,6 +1,12 @@
 # ORKS
 Open standard API Spec - ORKS (Open Revocable Key Standard)
 
+<p align="center">
+  <img src="docs/orks-overview.svg" alt="ORKS overview: a leaked key found in a public repo is attributed to its issuer from the key itself, the reporter fetches the issuer's /.well-known/api-key-config, POSTs the full key to the revocation endpoint, receives a uniform 200 accepted, and the key moves ACTIVE to QUARANTINED to REVOKED (or straight to REVOKED in immediate mode)" width="880">
+</p>
+
+*Figure: how a leaked ORKS key gets found, reported, and shut off.*
+
 
 # Open Revocable Key Standard (ORKS)
  
